@@ -12,7 +12,7 @@
 --next
 -neko bin/test.n
 -cmd neko bin/test.n
---next
--lib hxnodejs
--js bin/test.js
--cmd node bin/test.js
+#--next
+#-lib hxnodejs
+#-js bin/test.js
+#-cmd node bin/test.js
