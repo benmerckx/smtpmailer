@@ -1,4 +1,5 @@
 -cp ../asys
+-lib tink_macro
 #-lib asys
 -lib hxssl
 -lib tink_core

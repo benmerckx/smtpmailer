@@ -60,6 +60,8 @@ class UntilLine extends ByteWiseParser<String> {
 	}
 }
 
+
+@:build(await.Await.build())
 class SmtpMailer {
 	
 	var socket: Socket;
@@ -134,7 +136,7 @@ class SmtpMailer {
 				>> function (line: String) {
 					return
 					if (line.substr(0, 3) == '334')
-						login();
+						Future.sync(Failure(new Error('Do login')));
 					else
 						Future.sync(Failure(new Error('Server did not respond to starttls command')));
 				};
@@ -143,9 +145,9 @@ class SmtpMailer {
 		};
 	}
 	
-	function login(): Surprise<Noise, Error> {
+	/*function login(): Surprise<Noise, Error> {
 		return writeLine(Base64.encode(connection.auth.)
-	}
+	}*/
 	
 	function startTls() {
 		return writeLine('STARTTLS')
