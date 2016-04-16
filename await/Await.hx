@@ -41,11 +41,11 @@ class AsyncField {
 			case EBlock(el): list = list.concat(el);
 			default: list.push(processed);
 		}
-		list.push(macro return $triggerVar);
+		list.push(macro return $triggerVar.asFuture());
 		return list.toBlock(expr.pos);
 	}
 	
-	function tmp(): String return "$t"+(count++);
+	function tmp(): String return "__t"+(count++);
 	
 	function copy(e: Expr): Expr
 		return {expr: e.expr, pos: e.pos};
@@ -61,6 +61,7 @@ class AsyncField {
 		
 		while (el.length > 0) {
 			var e = el.shift();
+			if (e == null) continue;
 			switch e.expr {
 				case EBlock(el):
 					output.push(process(el, catcher));
@@ -139,21 +140,25 @@ class AsyncField {
 					if (await != null) {
 						var handle = copy(await.b);
 						var surprise = tmp(), value = tmp(), success = tmp();
-						await.a.expr = (macro $i{value}).expr;
+						await.a.expr = (macro cast $i{value}).expr;
 						el.unshift(e);
 						var body = process(el, catcher);
-						body = macro {
+						body = macro @:pos(e.pos) {
+							var $value = 
 							if (Std.is($i{surprise}, tink.core.Outcome))
-								switch $i{surprise} {
+								switch untyped $i{surprise} {
 									case tink.core.Outcome.Success($i{success}): 
-										$i{value} = $i{success};
+										untyped $i{success};
 									case tink.core.Outcome.Failure(e):
 										${catchCall(catcher)};
+										return;
 								}
+							else
+								untyped $i{surprise};
 							try $body catch (e: Dynamic) ${catchCall(catcher)};
 						};
 						var func = body.func([surprise.toArg()], null, null, false).asExpr();
-						output.push(process([macro $handle.handle($func)], catcher));
+						output.push(process([macro @:pos(handle.pos) $handle.handle($func)], catcher));
 						break;
 					}
 					output.push(e);
@@ -180,7 +185,14 @@ class Await {
 					for (meta in field.meta) {
 						if (meta.name == ':async') {
 							var flow = new AsyncField(f.expr);
-							f.expr.expr = flow.transform().expr;
+							var processed = flow.transform();
+							#if debug
+							Sys.println('==================================');
+							Sys.println(field.name);
+							Sys.println('==================================');
+							Sys.println(processed.toString());
+							#end
+							f.expr = processed;
 						}
 					}
 				}

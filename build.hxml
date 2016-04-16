@@ -1,19 +1,20 @@
 -cp ../asys
 -lib tink_macro
-#-lib asys
--lib hxssl
+#-lib asys:0.0.3
 -lib tink_core
 -lib tink_streams
-#-lib tink_io
--cp ../tink_io/src
+-lib tink_io:0.2.0
+-D analyzer
+-dce full
 -main SmtpMailer
 --each
 #-php bin/php/
 #-cmd php bin/php/index.php
---next
--neko bin/test.n
--cmd neko bin/test.n
 #--next
-#-lib hxnodejs
-#-js bin/test.js
-#-cmd node bin/test.js
+#-lib hxssl
+#-neko bin/test.n
+#-cmd neko bin/test.n
+--next
+-lib hxnodejs
+-js bin/test.js
+-cmd node bin/test.js

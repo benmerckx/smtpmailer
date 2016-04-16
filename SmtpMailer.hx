@@ -2,8 +2,8 @@ package;
 
 import asys.net.Socket;
 import asys.net.Host;
+import haxe.io.Bytes;
 import haxe.io.Error;
-import haxe.Timer;
 import tink.io.Sink;
 import tink.io.IdealSource;
 import tink.io.Source;
@@ -27,6 +27,7 @@ typedef SmtpConnection = {
 typedef Email = {
 	from: String,
 	to: Array<String>,
+	subject: String,
 	body: String
 }
 
@@ -76,9 +77,14 @@ class SmtpMailer {
 		this.connection = connection;
 	}
 	
-	function connect(): Surprise<Noise, Error> {
+	function hasCode(line: String, code: Int) {
+		var str = Std.string(code);
+		return line.substr(0, str.length) == str;
+	}
+	
+	@:async function connect() {
 		if (connected)
-			return Future.sync(Success(Noise));
+			return Noise;
 			
 		socket = switch connection.secure {
 			case No | StartTls: new Socket();
@@ -91,105 +97,84 @@ class SmtpMailer {
 		socket.connect(new Host(connection.host), connection.port);
 		source = socket.input;
 		
-		return readLine()
-		>> function(line: String) {
-			if (line.indexOf('ESMTP') == -1)
-				return writeLine('HELO '+Host.localhost())
-				>> function(res) return switch res {
-					case PipeResult.AllWritten: [];
-					default: throw 'Could not write to stream';
-				};
-				
-			return writeLine('EHLO '+Host.localhost())
-			>> function(res) return switch res {
-				case PipeResult.AllWritten: getOptions();
-				default: throw 'Could not write to stream';
-			};
-		}
-		>> function (options: Array<String>) {
-			this.options = options;
-			return switch connection.secure {
-				case StartTls | Auto if (hasOption(['starttls'])):
-					startTls();
-				default:
-					Future.sync(Success(Noise));
-			}
-		}
-		>> function (res): Surprise<Noise, Error> return switch res {
-			case Success(_):
+		var line: String = @:await readLine();
+		var command = (line.indexOf('ESMTP') == -1 ? 'HELO ':'EHLO ');
+		@:await writeLine(command+Host.localhost());
+		options = @:await getOptions();
+		switch connection.secure {
+			case StartTls | Auto if (hasOption(['starttls'])):
+				@:await startTls();
 				if (connection.auth == null)
-					Future.sync(Success(Noise));
+					return Noise;
 				else if (!hasOption(['login', 'auth']))
-					Future.sync(Failure(new Error('Server does not support auth login')));
+					throw 'Server does not support auth login';
 				else
-					auth();
-			case Failure(e): 
-				Future.sync(Failure(e));
-		};
-	}
-	
-	function auth(): Surprise<Noise, Error> {
-		return writeLine('AUTH LOGIN')
-		>> function(res) return switch res {
-			case PipeResult.AllWritten:
-				return readLine()
-				>> function (line: String) {
-					return
-					if (line.substr(0, 3) == '334')
-						Future.sync(Failure(new Error('Do login')));
-					else
-						Future.sync(Failure(new Error('Server did not respond to starttls command')));
-				};
+					return @:await auth();
 			default:
-				Future.sync(Failure(new Error('Could not write auth to stream')));
-		};
-	}
-	
-	/*function login(): Surprise<Noise, Error> {
-		return writeLine(Base64.encode(connection.auth.)
-	}*/
-	
-	function startTls() {
-		return writeLine('STARTTLS')
-		>> function(res) return switch res {
-			case PipeResult.AllWritten:
-				return 
-				readLine()
-				>> function (line: String) {
-					if (line.substr(0, 3) == '220') {
-						socket = asys.ssl.Socket.upgrade(socket);
-						return Success(Noise);
-					}
-					return Failure(new Error('Server did not respond to starttls command'));
-				};
-			default: 
-				Future.sync(Failure(new Error('Could not initiate starttls')));
-		}
-		>> function(res) return switch res {
-			case Success(_):
-				return writeLine('EHLO '+Host.localhost())
-				>> function(res) return switch res {
-					case PipeResult.AllWritten: 
-						getOptions();
-					default: throw 'Could not write to stream';
-				}
-				>> function (options: Array<String>) {
-					this.options = options;
-					return Success(Noise);
-				}
-			case Failure(e): 
-				Future.sync(Failure(e));
+				return Noise;
 		}
 	}
 	
-	public function send(email: Email): Surprise<Noise, Error> {
-		return connect()
-		>> function(res) return switch res {
-			case Success(_):
-				Success(Noise);
-			case Failure(e):
-				Failure(e);
-		};
+	@:async function auth() {
+		@:await writeLine('AUTH LOGIN');
+		if (hasCode(@:await readLine(), 334))
+			return @:await login();
+		else
+			throw 'Server did not respond to starttls command';
+	}
+	
+	@:async function login() {
+		@:await writeLine(Base64.encode(Bytes.ofString(connection.auth.username)));
+		var line = @:await readLine();
+		if (!hasCode(line, 334))
+			throw 'Could not authenticate';
+		@:await writeLine(Base64.encode(Bytes.ofString(connection.auth.password)));
+		var line = @:await readLine();
+		if (!hasCode(line, 235))
+			throw 'Wrong credentials';
+		else
+			return Noise;
+	}
+	
+	@:async function startTls() {
+		@:await writeLine('STARTTLS');
+		if (hasCode(@:await readLine(), 220)) {
+			socket = asys.ssl.Socket.upgrade(socket);
+			@:await writeLine('EHLO '+Host.localhost());
+			options = @:await getOptions();
+			return Noise;
+		}
+	}
+	
+	@:async public function send(email: Email) {
+		try {
+			@:await connect();
+			@:await writeLine('MAIL from: '+email.from);
+			@:await readLine();
+			@:await writeLine('RCPT to: '+email.to.join(','));
+			@:await readLine();
+			@:await writeLine('DATA');
+			var line = @:await readLine();
+			if (!hasCode(line, 354))
+				throw 'Could not send data';
+			else {
+				@:await writeLine('From: '+email.from);
+				@:await writeLine('To: '+email.to.join(','));
+				@:await writeLine('Subject: '+email.subject);
+				@:await writeLine('');
+				@:await writeLine(email.body);
+				@:await writeLine('');
+				@:await writeLine('.');
+				var line = @:await readLine();
+				if (!hasCode(line, 250))
+					throw 'Sending data failed';
+				else
+					return Noise;
+			}
+		} catch (e: Dynamic) {
+			socket.close();
+			throw e;
+		}
 	}
 	
 	function hasOption(tokens: Array<String>): Bool {
@@ -222,27 +207,29 @@ class SmtpMailer {
 		return trigger.asFuture();
 	}
 	
-	function getOption(): Surprise<String, Noise>
-		return readLine()
-		>> function(line: String)
-			return StringTools.startsWith(line, '250')
-				? Success(line)
-				: Failure(Noise);
-	
-	function writeLine(line: String) {
-		trace('write: '+line);
-		source = socket.input;
-		return ((line+"\r\n"): IdealSource).pipeTo(socket.output);
+	@:async function getOption() {
+		var line: String = @:await readLine();
+		if (hasCode(line, 250))
+			return line;
+		else
+			throw Noise;
 	}
 	
-	function readLine(): Future<String>
-		return source.parse(new UntilLine())
-		>> function (res) return switch res {
-			case Success(response):
-				trace('read: '+response.data);
-				source = response.rest;
-				response.data;
-			default: '';
+	@:async function writeLine(line: String) {
+		trace('write: '+line);
+		source = socket.input;
+		switch @:await ((line+"\r\n"): IdealSource).pipeTo(socket.output) {
+			case PipeResult.AllWritten: 
+				return Noise;
+			default: 
+				throw 'Could not write to stream';
 		}
+	}
+	
+	@:async function readLine() {
+		var response = @:await source.parse(new UntilLine());
+		source = response.rest;
+		trace('read: '+ response.data);
+		return response.data;
 	}
 }
