@@ -110,27 +110,24 @@ class SmtpMailer {
 					throw 'Server does not support auth login';
 				else
 					return @:await auth();
-			default:
-				return Noise;
+			default: null;
 		}
+		return Noise;
 	}
 	
 	@:async function auth() {
 		@:await writeLine('AUTH LOGIN');
 		if (hasCode(@:await readLine(), 334))
 			return @:await login();
-		else
-			throw 'Server did not respond to starttls command';
+		throw 'Server did not respond to starttls command';
 	}
 	
 	@:async function login() {
 		@:await writeLine(Base64.encode(Bytes.ofString(connection.auth.username)));
-		var line = @:await readLine();
-		if (!hasCode(line, 334))
+		if (!hasCode(@:await readLine(), 334))
 			throw 'Could not authenticate';
 		@:await writeLine(Base64.encode(Bytes.ofString(connection.auth.password)));
-		var line = @:await readLine();
-		if (!hasCode(line, 235))
+		if (!hasCode(@:await readLine(), 235))
 			throw 'Wrong credentials';
 		else
 			return Noise;
@@ -142,8 +139,8 @@ class SmtpMailer {
 			socket = asys.ssl.Socket.upgrade(socket);
 			@:await writeLine('EHLO '+Host.localhost());
 			options = @:await getOptions();
-			return Noise;
 		}
+		return Noise;
 	}
 	
 	@:async public function send(email: Email) {
@@ -151,26 +148,24 @@ class SmtpMailer {
 			@:await connect();
 			@:await writeLine('MAIL from: '+email.from);
 			@:await readLine();
+			// check 250
 			@:await writeLine('RCPT to: '+email.to.join(','));
 			@:await readLine();
+			// check 250
 			@:await writeLine('DATA');
 			var line = @:await readLine();
 			if (!hasCode(line, 354))
 				throw 'Could not send data';
-			else {
-				@:await writeLine('From: '+email.from);
-				@:await writeLine('To: '+email.to.join(','));
-				@:await writeLine('Subject: '+email.subject);
-				@:await writeLine('');
-				@:await writeLine(email.body);
-				@:await writeLine('');
-				@:await writeLine('.');
-				var line = @:await readLine();
-				if (!hasCode(line, 250))
-					throw 'Sending data failed';
-				else
-					return Noise;
-			}
+			@:await writeLine('From: '+email.from);
+			@:await writeLine('To: '+email.to.join(','));
+			@:await writeLine('Subject: '+email.subject);
+			@:await writeLine('');
+			@:await writeLine(email.body);
+			@:await writeLine('');
+			@:await writeLine('.');
+			if (!hasCode(@:await readLine(), 250))
+				throw 'Sending data failed';
+			return Noise;
 		} catch (e: Dynamic) {
 			socket.close();
 			throw e;
@@ -232,4 +227,5 @@ class SmtpMailer {
 		trace('read: '+ response.data);
 		return response.data;
 	}
+
 }
