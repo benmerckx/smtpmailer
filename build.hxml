@@ -17,4 +17,4 @@
 --next
 -lib hxnodejs
 -js bin/test.js
--cmd node bin/test.js
+#-cmd node bin/test.js
