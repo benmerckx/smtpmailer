@@ -10,7 +10,7 @@ using Lambda;
 
 typedef AsyncContext = {
 	?catcher: String,
-	loop: Bool,
+	inAsyncLoop: Bool,
 	needsResult: Bool
 }
 
@@ -24,20 +24,28 @@ class AsyncField {
 	public function transform(): Expr
 		return macro @:pos(expr.pos)
 			return tink.core.Future.async(function(__return) 
-				try ${process(expr, {loop: false, needsResult: false}, function(e) return e)}
+				try ${process(expr, {inAsyncLoop: false, needsResult: false}, function(e) return e)}
 				catch(e: Dynamic) ${catchCall(null)}
 			)
 		;
 		
-	/*function hasAwait(e: Expr): Bool
+	function hasAwait(?el: Array<Expr>, ?e: Expr): Bool {
+		if (el != null) {
+			for (e in el)
+				if (hasAwait(e)) 
+					return true;
+			return false;
+		}
+		if (e == null) return false;
 		switch e.expr {
-			case EMeta(m, em) if (m.name == ':await'):
+			case EMeta(m, em) if (m.name == 'await'):
 				return true;
 			default:
 				var await = false;
 				e.iter(function(e) if (hasAwait(e)) await = true);
 				return await;
-		}*/
+		}
+	}
 		
 	function catchCall(catcher: Null<String>)
 		return 
@@ -77,31 +85,43 @@ class AsyncField {
 		return transformNext(0, []);
 	}
 	
-	function passAsync(async, next)
-		return function(isAsync, transformed)
-			return next(isAsync ? true : async, transformed);
+	function processControl(e: Expr, ctx: AsyncContext): Expr {
+		if (e == null) return null;
+		switch e.expr {
+			case null: return null;
+			case EReturn(e1): 
+				return macro @:pos(e.pos)
+					{__return(tink.core.Outcome.Success($e1)); return;}
+			case EBreak if(ctx.inAsyncLoop):
+				return macro {__break(); return;}
+			case EContinue if(ctx.inAsyncLoop):
+				return macro {__continue(); return;}
+			case EFunction(_,_): return e;
+			default: return e.map(processControl.bind(_, ctx));
+		}
+	}
 		
-	function process(e: Expr, ctx: AsyncContext, next: Bool -> Expr -> Expr): Expr {
+	function process(e: Expr, ctx: AsyncContext, next: Expr -> Expr): Expr {
 		ctx = Reflect.copy(ctx);
 		switch e.expr {
 			case EBlock(el):
 				if (el.length == 0) return emptyExpr();
-				function line(i:Int, async): Expr {
+				function line(i:Int): Expr {
 					if (i == el.length - 1)
-						return process(el[i], ctx, passAsync(async, next));
+						return process(el[i], ctx, next);
 					
-					return process(el[i], ctx, function(isAsync, transformed: Expr) {
+					return process(el[i], ctx, function(transformed: Expr) {
 						var response = [transformed];
-						response.push(line(i+1, isAsync ? true : async));
+						response.push(line(i+1));
 						return bundle(response);
 				  });
 				}
 				return line(0);
 			case EMeta(m, em) if (m.name == 'await'):
 				var tmp = tmpVar();
-				return process(em, ctx, function(async, transformed)
+				return process(em, ctx, function(transformed)
 					return macro @:pos(em.pos)
-						$transformed.handle(${handler(tmp, ctx, passAsync(async, next))})
+						$transformed.handle(${handler(tmp, ctx, next)})
 				);
 			case EFor(it, expr):
 				switch it.expr {
@@ -120,8 +140,16 @@ class AsyncField {
 					default:
 				}
 			case EWhile(econd, e1, normalWhile):
+				if (!hasAwait(e1)) {
+					ctx.inAsyncLoop = false;
+					ctx.needsResult = false;
+					return process(econd, ctx, function(tcond)
+						return next(EWhile(tcond, processControl(e1, ctx), normalWhile).at(e.pos))
+					);
+				}
 				var continueName = tmpVar(), breakName = tmpVar();
 				ctx.needsResult = false;
+				ctx.inAsyncLoop = true;
 				var doBody = process(e1, ctx, function(transformed) 
 					return bundle([transformed, continueName.resolve().call()])
 				);
@@ -177,7 +205,6 @@ class AsyncField {
 				var declaration = EFunction(name, func).at(e.pos);
 				ctx.catcher = name;
 				var call = name.resolve().call(['e'.resolve()]);
-				//trace(e1.toString());
 				var entry = process(e1, ctx, wrapper.invocation);
 				entry = macro @:pos(e.pos)
 					try $entry catch(e: Dynamic) $call;
@@ -199,6 +226,11 @@ class AsyncField {
 				);
 			case ETernary(econd, eif, eelse) |
 				 EIf (econd, eif, eelse):
+				if (!hasAwait([eif, eelse])) {
+					return process(econd, ctx, function(tcond)
+						return next(EIf(tcond, processControl(eif, ctx), processControl(eelse, ctx)).at(e.pos))
+					);
+				}
 				var wrapper = new AsyncWrapper(ctx, next);
 				return process(econd, ctx, function(transformed) {
 					var declaration = wrapper.declaration();

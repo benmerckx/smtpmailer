@@ -214,10 +214,6 @@ class SmtpMailer {
 	}
 	
 	@async function readLine() {
-		while(true) {
-				trace('a');
-				break;
-			}
 		var response = @await source.parse(new UntilLine());
 		source = response.rest;
 		trace('read: '+ response.data);

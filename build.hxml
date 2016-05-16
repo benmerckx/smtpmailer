@@ -8,11 +8,11 @@
 -dce full
 -main SmtpMailer
 --each
-#-php bin/php/
+-php bin/php/
 #-cmd php bin/php/index.php
-#--next
-#-lib hxssl
-#-neko bin/test.n
+--next
+-lib hxssl
+-neko bin/test.n
 #-cmd neko bin/test.n
 --next
 -lib hxnodejs
