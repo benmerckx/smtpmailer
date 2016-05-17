@@ -1,4 +1,4 @@
-package;
+package smtpmailer;
 
 import asys.net.Socket;
 import asys.net.Host;
@@ -7,7 +7,6 @@ import haxe.io.Error;
 import tink.io.Sink;
 import tink.io.IdealSource;
 import tink.io.Source;
-import tink.io.StreamParser;
 import haxe.io.BytesOutput;
 import tink.io.Pipe;
 import haxe.crypto.Base64;
@@ -38,43 +37,51 @@ enum Secure {
 	StartTls;
 }
 
-class UntilLine extends ByteWiseParser<String> {
-  
-	var buf: StringBuf = new StringBuf();
-	
-	override function read(c: Int): ParseStep<String> {
-		return switch c {
-			case 10:
-				var ret = buf.toString();
-				if (ret.charCodeAt(ret.length-1) == 13) 
-					ret = ret.substr(0, -1);
-				if (ret == '')
-					Progressed;
-				else {
-					buf = new StringBuf();
-					Done(ret);
-				}
-			default:
-				buf.addChar(c);
-				Progressed;
-		}
-	}
-}
-
-
-@:build(await.Await.build())
-class SmtpMailer {
+class SmtpMailer implements await.Await {
 	
 	var socket: Socket;
 	var source: Source;
 	var connection: SmtpConnection;
 	var connected = false;
 	var options: Array<String>;
+	var parser = new LineParser();
 
 	public function new(connection: SmtpConnection) {
 		if (connection.secure == null)
 			connection.secure = Secure.Auto;
 		this.connection = connection;
+	}
+	
+	@async public function send(email: Email) {
+		try {
+			@await connect();
+			@await writeLine('MAIL from: '+email.from);
+			var line = @await readLine();
+			if (!hasCode(line, 250))
+				throw line;
+			@await writeLine('RCPT to: '+email.to.join(','));
+			var line = @await readLine();
+			if (!hasCode(line, 250))
+				throw line;
+			@await writeLine('DATA');
+			var line = @await readLine();
+			if (!hasCode(line, 354))
+				throw line;
+			@await writeLine('From: '+email.from);
+			@await writeLine('To: '+email.to.join(','));
+			@await writeLine('Subject: '+email.subject);
+			@await writeLine('');
+			@await writeLine(email.body);
+			@await writeLine('');
+			@await writeLine('.');
+			var line = @await readLine();
+			if (!hasCode(line, 250))
+				throw line;
+			return Noise;
+		} catch (e: Dynamic) {
+			socket.close();
+			throw e;
+		}
 	}
 	
 	function hasCode(line: String, code: Int) {
@@ -142,39 +149,7 @@ class SmtpMailer {
 		}
 		return Noise;
 	}
-	
-	@async public function send(email: Email) {
-		try {
-			@await connect();
-			@await writeLine('MAIL from: '+email.from);
-			var line = @await readLine();
-			if (!hasCode(line, 250))
-				throw line;
-			@await writeLine('RCPT to: '+email.to.join(','));
-			var line = @await readLine();
-			if (!hasCode(line, 250))
-				throw line;
-			@await writeLine('DATA');
-			var line = @await readLine();
-			if (!hasCode(line, 354))
-				throw line;
-			@await writeLine('From: '+email.from);
-			@await writeLine('To: '+email.to.join(','));
-			@await writeLine('Subject: '+email.subject);
-			@await writeLine('');
-			@await writeLine(email.body);
-			@await writeLine('');
-			@await writeLine('.');
-			var line = @await readLine();
-			if (!hasCode(line, 250))
-				throw line;
-			return Noise;
-		} catch (e: Dynamic) {
-			socket.close();
-			throw e;
-		}
-	}
-	
+		
 	function hasOption(tokens: Array<String>): Bool {
 		for (option in options) {
 			var matches = true;
@@ -214,10 +189,9 @@ class SmtpMailer {
 	}
 	
 	@async function readLine() {
-		var response = @await source.parse(new UntilLine());
+		var response = @await source.parse(parser);
 		source = response.rest;
 		trace('read: '+ response.data);
 		return response.data;
 	}
-
 }
