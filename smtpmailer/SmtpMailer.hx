@@ -23,13 +23,6 @@ typedef SmtpConnection = {
 	}
 }
 
-typedef Email = {
-	from: String,
-	to: Array<String>,
-	subject: String,
-	body: String
-}
-
 enum Secure {
 	Auto;
 	No;
@@ -45,6 +38,8 @@ class SmtpMailer implements await.Await {
 	var connected = false;
 	var options: Array<String>;
 	var parser = new LineParser();
+	var queue: Array<Pair<Email, FutureTrigger<Outcome<Noise, Dynamic>>>> = [];
+	var processing = false;
 
 	public function new(connection: SmtpConnection) {
 		if (connection.secure == null)
@@ -52,41 +47,63 @@ class SmtpMailer implements await.Await {
 		this.connection = connection;
 	}
 	
-	@async public function send(email: Email) {
+	public function send(email: Email) {
+		var trigger = Future.trigger();
+		queue.push(new Pair(email, trigger));
+		processQueue();
+		return trigger.asFuture();
+	}
+	
+	@await function processQueue() {
+		if (!processing) {
+			processing = true;
+			while (queue.length > 0) {
+				var pair = queue.shift(),
+					email = pair.a,
+					trigger = pair.b;
+				
+				trigger.trigger(
+					try Success(@await sendMessage(email))
+					catch(e: String) Failure(e)
+				);
+			}
+			processing = false;
+			#if nodejs
+			if (connected) {
+				connected = false;
+				socket.close();
+			}
+			#end
+		}
+	}
+	
+	@async function sendMessage(email: Email) {
 		try {
 			@await connect();
 			@await writeLine('MAIL from: '+email.from);
-			var line = @await readLine();
-			if (!hasCode(line, 250))
-				throw line;
-			@await writeLine('RCPT to: '+email.to.join(','));
-			var line = @await readLine();
-			if (!hasCode(line, 250))
-				throw line;
+			@await readLine(250);
+			for (user in email.to) {
+				@await writeLine('RCPT to: '+user);
+				@await readLine(250);
+			}
 			@await writeLine('DATA');
-			var line = @await readLine();
-			if (!hasCode(line, 354))
-				throw line;
+			@await readLine(354);
 			@await writeLine('From: '+email.from);
 			@await writeLine('To: '+email.to.join(','));
 			@await writeLine('Subject: '+email.subject);
 			@await writeLine('');
-			@await writeLine(email.body);
+			@await writeLine(email.content.text);
 			@await writeLine('');
 			@await writeLine('.');
-			var line = @await readLine();
-			if (!hasCode(line, 250))
-				throw line;
+			@await readLine(250);
 			return Noise;
 		} catch (e: Dynamic) {
-			socket.close();
+			if (connected) {
+				socket.close();
+				connected = false;
+			}
 			throw e;
 		}
-	}
-	
-	function hasCode(line: String, code: Int) {
-		var str = Std.string(code);
-		return line.substr(0, str.length) == str;
 	}
 	
 	@async function connect() {
@@ -101,52 +118,51 @@ class SmtpMailer implements await.Await {
 				? new asys.ssl.Socket()
 				: new Socket();
 		}
-		socket.connect(new Host(connection.host), connection.port);
-		source = socket.input;
 		
-		var line: String = @await readLine();
-		var command = (line.indexOf('ESMTP') == -1 ? 'HELO ':'EHLO ');
+		var start: String;
+		try {
+			@await socket.connect(new Host(connection.host), connection.port);
+			socket.setTimeout(5);
+			source = socket.input;
+			start = @await readLine(220);
+		} catch (e: Dynamic) {
+			throw 'Could not connect to host: '+e;
+		}
+		var command = (start.indexOf('ESMTP') == -1 ? 'HELO ':'EHLO ');
 		@await writeLine(command+Host.localhost());
 		options = @await getOptions();
 		switch connection.secure {
 			case StartTls | Auto if (hasOption(['starttls'])):
 				@await startTls();
-				if (connection.auth == null)
-					return Noise;
-				else if (!hasOption(['login', 'auth']))
-					throw 'Server does not support auth login';
-				else
-					return @await auth();
 			default:
 		}
+		
+		if (connection.auth != null)
+			if (!hasOption(['login', 'auth']))
+				throw 'Server does not support auth login';
+			else
+				@await auth();
+		
+		connected = true;
+		return Noise;
+	}
+	
+	@async function startTls() {
+		@await writeLine('STARTTLS');
+		@await readLine(220);
+		socket = asys.ssl.Socket.upgrade(socket);
+		@await writeLine('EHLO '+Host.localhost());
+		options = @await getOptions();
 		return Noise;
 	}
 	
 	@async function auth() {
 		@await writeLine('AUTH LOGIN');
-		if (hasCode(@await readLine(), 334))
-			return @await login();
-		throw 'Server did not respond to starttls command';
-	}
-	
-	@async function login() {
+		@await readLine(334);
 		@await writeLine(Base64.encode(Bytes.ofString(connection.auth.username)));
-		if (!hasCode(@await readLine(), 334))
-			throw 'Could not authenticate';
+		@await readLine(334);
 		@await writeLine(Base64.encode(Bytes.ofString(connection.auth.password)));
-		if (!hasCode(@await readLine(), 235))
-			throw 'Wrong credentials';
-		else
-			return Noise;
-	}
-	
-	@async function startTls() {
-		@await writeLine('STARTTLS');
-		if (hasCode(@await readLine(), 220)) {
-			socket = asys.ssl.Socket.upgrade(socket);
-			@await writeLine('EHLO '+Host.localhost());
-			options = @await getOptions();
-		}
+		@await readLine(235);
 		return Noise;
 	}
 		
@@ -166,12 +182,10 @@ class SmtpMailer implements await.Await {
 	@async function getOptions() {
 		var options = [];
 		while (true) {
-			var line: String = @await readLine();
-			if (hasCode(line, 250)) {
-				options.push(line);
-				if (line.substr(3, 1) == '-')
-					continue;
-			}
+			var line: String = @await readLine(250);
+			options.push(line);
+			if (line.substr(3, 1) == '-')
+				continue;
 			break;
 		}
 		return options;
@@ -188,10 +202,19 @@ class SmtpMailer implements await.Await {
 		}
 	}
 	
-	@async function readLine() {
+	function hasCode(line: String, code: Int) {
+		var str = Std.string(code);
+		return line.substr(0, str.length) == str;
+	}
+	
+	@async function readLine(expectedStatus: Int) {
+		if (source == null) throw 'Could not read from stream';
 		var response = @await source.parse(parser);
 		source = response.rest;
-		trace('read: '+ response.data);
-		return response.data;
+		var line = response.data;
+		trace('read: '+ line);
+		if (!hasCode(line, expectedStatus))
+			throw line;
+		return line;
 	}
 }
