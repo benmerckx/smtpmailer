@@ -119,7 +119,7 @@ class SmtpMailer implements await.Await {
 				: new Socket();
 		}
 		
-		var start: String;
+		var start: String = '';
 		try {
 			@await socket.connect(new Host(connection.host), connection.port);
 			socket.setTimeout(5);
