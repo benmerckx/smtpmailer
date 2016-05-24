@@ -9,8 +9,8 @@
   "contributors": ["benmerckx"],
   "classPath": "src",
   "dependencies": {
-    "asys": "0.0.6",
+    "asys": "",
     "mime": "",
-    "await": "0.0.3"
+    "await": ""
   }
 }
