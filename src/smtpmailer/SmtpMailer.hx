@@ -4,12 +4,12 @@ import asys.net.Socket;
 import asys.net.Host;
 import haxe.io.Bytes;
 import haxe.io.Error;
+import haxe.io.BytesOutput;
+import haxe.crypto.Base64;
 import tink.io.Sink;
 import tink.io.IdealSource;
 import tink.io.Source;
-import haxe.io.BytesOutput;
 import tink.io.Pipe;
-import haxe.crypto.Base64;
 
 using tink.CoreApi;
 
@@ -64,7 +64,7 @@ class SmtpMailer implements await.Await {
 				
 				trigger.trigger(
 					try Success(@await sendMessage(email))
-					catch(e: String) Failure(e)
+					catch(e: Dynamic) Failure(e)
 				);
 			}
 			processing = false;
@@ -78,6 +78,7 @@ class SmtpMailer implements await.Await {
 	}
 	
 	@async function sendMessage(email: Email) {
+		var encoded: String = MultipartEncoder.encode(email);
 		try {
 			@await connect();
 			@await writeLine('MAIL from: '+email.from);
@@ -88,11 +89,10 @@ class SmtpMailer implements await.Await {
 			}
 			@await writeLine('DATA');
 			@await readLine(354);
-			@await writeLine('From: '+email.from);
-			@await writeLine('To: '+email.to.join(','));
-			@await writeLine('Subject: '+email.subject);
-			@await writeLine('');
-			@await writeLine(email.content.text);
+			switch @await (encoded: IdealSource).pipeTo(socket.output) {
+				case PipeResult.AllWritten:
+				default: throw 'Could not write to stream';
+			}
 			@await writeLine('');
 			@await writeLine('.');
 			@await readLine(250);
@@ -192,7 +192,6 @@ class SmtpMailer implements await.Await {
 	}
 	
 	@async function writeLine(line: String) {
-		trace('write: '+line);
 		source = socket.input;
 		switch @await ((line+"\r\n"): IdealSource).pipeTo(socket.output) {
 			case PipeResult.AllWritten: 
@@ -212,7 +211,6 @@ class SmtpMailer implements await.Await {
 		var response = @await source.parse(parser);
 		source = response.rest;
 		var line = response.data;
-		trace('read: '+ line);
 		if (!hasCode(line, expectedStatus))
 			throw line;
 		return line;

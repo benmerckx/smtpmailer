@@ -1,0 +1,16 @@
+{
+  "name": "smtpmailer",
+  "url" : "https://github.com/benmerckx/smtpmailer",
+  "license": "MIT",
+  "tags": ["web"],
+  "description": "Haxe SMTP mailer with support for SSL & StartTLS",
+  "version": "0.0.0",
+  "releasenote": "Init",
+  "contributors": ["benmerckx"],
+  "classPath": "src",
+  "dependencies": {
+	"asys": "0.0.5",
+    "mime": "",
+	"await": "0.0.3"
+  }
+}
