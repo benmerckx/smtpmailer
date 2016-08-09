@@ -4,13 +4,13 @@
   "license": "MIT",
   "tags": ["web"],
   "description": "Haxe SMTP mailer with support for SSL & StartTLS",
-  "version": "0.0.0",
-  "releasenote": "Init",
+  "version": "0.0.1",
+  "releasenote": "Update to tink_await",
   "contributors": ["benmerckx"],
   "classPath": "src",
   "dependencies": {
     "asys": "",
     "mime": "",
-    "await": ""
+    "tink_await": ""
   }
 }

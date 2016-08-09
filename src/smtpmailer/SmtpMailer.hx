@@ -30,7 +30,9 @@ enum Secure {
 	StartTls;
 }
 
-class SmtpMailer implements await.Await {
+#if !macro
+@await
+class SmtpMailer {
 	
 	var socket: Socket;
 	var source: Source;
@@ -61,11 +63,12 @@ class SmtpMailer implements await.Await {
 				var pair = queue.shift(),
 					email = pair.a,
 					trigger = pair.b;
-				
-				trigger.trigger(
-					try Success(@await sendMessage(email))
-					catch(e: Dynamic) Failure(e)
-				);
+				try {
+					var result = @await sendMessage(email);
+					trigger.trigger(Success(Noise));
+				} catch (e: Dynamic) {
+					trigger.trigger(Failure(e));
+				}
 			}
 			processing = false;
 			#if nodejs
@@ -216,3 +219,4 @@ class SmtpMailer implements await.Await {
 		return line;
 	}
 }
+#end
