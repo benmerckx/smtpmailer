@@ -79,15 +79,22 @@ class SmtpMailer {
 			#end
 		}
 	}
+
+	// Todo: properly parse addresses which include names
+	function formatAddress(email: String) {
+		return 
+			if (email.indexOf('<') > -1) email
+			else '<'+email+'>';
+	}
 	
 	@async function sendMessage(email: Email) {
 		var encoded: String = MultipartEncoder.encode(email);
 		try {
 			@await connect();
-			@await writeLine('MAIL from: '+email.from);
+			@await writeLine('MAIL from: '+formatAddress(email.from));
 			@await readLine(250);
 			for (user in email.to) {
-				@await writeLine('RCPT to: '+user);
+				@await writeLine('RCPT to: '+formatAddress(user));
 				@await readLine(250);
 			}
 			@await writeLine('DATA');
@@ -197,7 +204,7 @@ class SmtpMailer {
 	@async function writeLine(line: String) {
 		source = socket.input;
 		switch @await ((line+"\r\n"): IdealSource).pipeTo(socket.output) {
-			case PipeResult.AllWritten: 
+			case PipeResult.AllWritten:
 				return Noise;
 			default: 
 				throw 'Could not write to stream';
