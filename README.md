@@ -4,7 +4,8 @@ Runs on sys targets and nodejs.
 
 #### SSL/StartTls:
 - Supported on java/php/nodejs
-- Supported with `-lib hxssl` on neko/cpp
+- Supported on haxe 3.2 neko/cpp with `-lib hxssl` 
+- Supported on haxe 3.3+ neko/cpp (using native sys.ssl.Socket)
 
 ```haxe
 var mailer = new SmtpMailer({
