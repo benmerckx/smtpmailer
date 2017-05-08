@@ -138,8 +138,8 @@ class SmtpMailer {
 		} catch (e: Dynamic) {
 			throw 'Could not connect to host: '+e;
 		}
-		var command = (start.indexOf('ESMTP') == -1 ? 'HELO ':'EHLO ');
-		@await writeLine(command+Host.localhost());
+		var command = (connection.auth == null && start.indexOf('ESMTP') == -1 ? 'HELO' : 'EHLO');
+		@await writeLine(command + ' ' + Host.localhost());
 		options = @await getOptions();
 		switch connection.secure {
 			case StartTls | Auto if (hasOption(['starttls'])):
