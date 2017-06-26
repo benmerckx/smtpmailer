@@ -18,7 +18,7 @@ var mailer = new SmtpMailer({
 });
 mailer.send({
 	subject: 'Subject',
-	from: { address: 'mail@example.com', displayName: 'It\s me, Mario!' },
+	from: { address: 'mail@example.com', displayName: "It's me, Mario!" },
 	to: ['mail@example.com'],
 	content: {
 		text: 'hello',
