@@ -1,10 +1,10 @@
 # smtpmailer
 
-Runs on sys targets and nodejs. 
+Runs on sys targets and nodejs.
 
 #### SSL/StartTls:
 - Supported on java/php/nodejs
-- Supported on haxe 3.2 neko/cpp with `-lib hxssl` 
+- Supported on haxe 3.2 neko/cpp with `-lib hxssl`
 - Supported on haxe 3.3+ neko/cpp (using native sys.ssl.Socket)
 
 ```haxe
@@ -18,7 +18,7 @@ var mailer = new SmtpMailer({
 });
 mailer.send({
 	subject: 'Subject',
-	from: 'mail@example.com',
+	from: { address: 'mail@example.com', displayName: 'It\s me, Mario!' },
 	to: ['mail@example.com'],
 	content: {
 		text: 'hello',
