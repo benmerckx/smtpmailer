@@ -8,7 +8,7 @@ class MultipartEncoder {
 	public static function encode(email: Email): String {
 		var main: Part;
 		var content: Part;
-		
+
 		if (email.content.html == null) {
 			content = new Part('text/plain', 'utf-8');
 			content.setContent(email.content.text);
@@ -19,7 +19,7 @@ class MultipartEncoder {
 			if (email.content.html != null)
 				content.newPart('text/html').setContent(email.content.html);
 		}
-			
+
 		if (email.attachments != null) {
 			main = new Part('multipart/mixed');
 			main.addPart(content);
@@ -32,15 +32,15 @@ class MultipartEncoder {
 		} else {
 			main = content;
 		}
-		
-		main.setHeader('From', email.from);
-		main.setHeader('To', email.to.join(','));
+
+		main.setHeader('From', '"${email.from.displayName}" <${email.from.address}>');
+		main.setHeader('To', email.to.map(function(to) return '"${to.displayName}" <${to.address}>').join(','));
 		main.setHeader('Subject', email.subject);
 		if (email.headers != null)
 			for (key in email.headers.keys())
 				main.setHeader(key, email.headers.get(key));
-		
+
 		return main.get();
 	}
-	
+
 }

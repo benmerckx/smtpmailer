@@ -33,7 +33,7 @@ enum Secure {
 #if !macro
 @await
 class SmtpMailer {
-	
+
 	var socket: Socket;
 	var source: Source;
 	var connection: SmtpConnection;
@@ -48,14 +48,14 @@ class SmtpMailer {
 			connection.secure = Secure.Auto;
 		this.connection = connection;
 	}
-	
+
 	public function send(email: Email) {
 		var trigger = Future.trigger();
 		queue.push(new Pair(email, trigger));
 		processQueue();
 		return trigger.asFuture();
 	}
-	
+
 	@await function processQueue() {
 		if (!processing) {
 			processing = true;
@@ -80,21 +80,14 @@ class SmtpMailer {
 		}
 	}
 
-	// Todo: properly parse addresses which include names
-	function formatAddress(email: String) {
-		return 
-			if (email.indexOf('<') > -1) email
-			else '<'+email+'>';
-	}
-	
 	@async function sendMessage(email: Email) {
 		var encoded: String = MultipartEncoder.encode(email);
 		try {
 			@await connect();
-			@await writeLine('MAIL from: '+formatAddress(email.from));
+			@await writeLine('MAIL from: ${AddressTools.sanitizeAddress(email.from.address)}');
 			@await readLine(250);
 			for (user in email.to) {
-				@await writeLine('RCPT to: '+formatAddress(user));
+				@await writeLine('RCPT to: ${AddressTools.sanitizeAddress(user.address)}');
 				@await readLine(250);
 			}
 			@await writeLine('DATA');
@@ -115,20 +108,20 @@ class SmtpMailer {
 			throw e;
 		}
 	}
-	
+
 	@async function connect() {
 		if (connected)
 			return Noise;
-			
+
 		socket = switch connection.secure {
 			case No | StartTls: new Socket();
 			case Ssl: new asys.ssl.Socket();
 			case Auto:
-				connection.port == 465 
+				connection.port == 465
 				? new asys.ssl.Socket()
 				: new Socket();
 		}
-		
+
 		var start: String = '';
 		try {
 			@await socket.connect(new Host(connection.host), connection.port);
@@ -146,17 +139,17 @@ class SmtpMailer {
 				@await startTls();
 			default:
 		}
-		
+
 		if (connection.auth != null)
 			if (!hasOption(['login', 'auth']))
 				throw 'Server does not support auth login';
 			else
 				@await auth();
-		
+
 		connected = true;
 		return Noise;
 	}
-	
+
 	@async function startTls() {
 		@await writeLine('STARTTLS');
 		@await readLine(220);
@@ -165,7 +158,7 @@ class SmtpMailer {
 		options = @await getOptions();
 		return Noise;
 	}
-	
+
 	@async function auth() {
 		@await writeLine('AUTH LOGIN');
 		@await readLine(334);
@@ -175,7 +168,7 @@ class SmtpMailer {
 		@await readLine(235);
 		return Noise;
 	}
-		
+
 	function hasOption(tokens: Array<String>): Bool {
 		for (option in options) {
 			var matches = true;
@@ -188,7 +181,7 @@ class SmtpMailer {
 		}
 		return false;
 	}
-	
+
 	@async function getOptions() {
 		var options = [];
 		while (true) {
@@ -200,22 +193,22 @@ class SmtpMailer {
 		}
 		return options;
 	}
-	
+
 	@async function writeLine(line: String) {
 		source = socket.input;
 		switch @await ((line+"\r\n"): IdealSource).pipeTo(socket.output) {
 			case PipeResult.AllWritten:
 				return Noise;
-			default: 
+			default:
 				throw 'Could not write to stream';
 		}
 	}
-	
+
 	function hasCode(line: String, code: Int) {
 		var str = Std.string(code);
 		return line.substr(0, str.length) == str;
 	}
-	
+
 	@async function readLine(expectedStatus: Int) {
 		if (source == null) throw 'Could not read from stream';
 		var response = @await source.parse(parser);
