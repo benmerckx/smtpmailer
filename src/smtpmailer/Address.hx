@@ -1,13 +1,11 @@
 package smtpmailer;
 
-using smtpmailer.AddressTools;
-
 typedef AddressData = {
 	address: String,
 	?displayName: String,
 }
 
-@:forward()
+@:forward
 abstract Address(AddressData) from AddressData {
 	public inline function new( address: AddressData )
 		this = {
