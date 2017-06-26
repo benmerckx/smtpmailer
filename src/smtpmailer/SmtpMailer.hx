@@ -84,10 +84,10 @@ class SmtpMailer {
 		var encoded: String = MultipartEncoder.encode(email);
 		try {
 			@await connect();
-			@await writeLine('MAIL from: ${AddressTools.sanitizeAddress(email.from.address)}');
+			@await writeLine('MAIL from: ${email.from.address}');
 			@await readLine(250);
 			for (user in email.to) {
-				@await writeLine('RCPT to: ${AddressTools.sanitizeAddress(user.address)}');
+				@await writeLine('RCPT to: ${user.address}');
 				@await readLine(250);
 			}
 			@await writeLine('DATA');
