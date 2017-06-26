@@ -33,8 +33,14 @@ class MultipartEncoder {
 			main = content;
 		}
 
-		main.setHeader('From', '"${email.from.displayName}" <${email.from.address}>');
-		main.setHeader('To', email.to.map(function(to) return '"${to.displayName}" <${to.address}>').join(','));
+		main.setHeader('From', email.from.displayName != null
+			? '"${email.from.displayName}" ${email.from.address}'
+			: '${email.from.address}'
+		);
+		main.setHeader('To', email.to.map(function(to) return to.displayName != null
+			? '"${to.displayName}" ${to.address}'
+			: '${to.address}'
+		).join(','));
 		main.setHeader('Subject', email.subject);
 		if (email.headers != null)
 			for (key in email.headers.keys())
