@@ -16,4 +16,9 @@ abstract Address(AddressData) from AddressData {
 	@:from
 	public static function ofString( address: String ): Address
 		return new Address({ address: address });
+
+	public function format()
+		return this.displayName != null
+			? '"${this.displayName}" ${this.address}'
+			: '${this.address}';
 }
