@@ -1,8 +1,8 @@
 package smtpmailer;
 
 typedef Email = {
-	from: String,
-	to: Array<String>,
+	from: Address,
+	to: Array<Address>,
 	subject: String,
 	?headers: Map<String, String>,
 	content: {
