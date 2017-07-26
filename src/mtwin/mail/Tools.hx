@@ -112,16 +112,25 @@ class Tools {
 		var lines = splitLines( content );
 
 		for( ln in lines ){
+			#if nodejs
+			var buff = js.node.Buffer.from(ln);
+			var len = buff.length;
+			#else
 			var len = ln.length;
+			#end
 			var line = "";
 			for( i in 0...len ){
+				#if nodejs
+				var c = String.fromCharCode(buff[i]);
+				#else
 				var c = ln.charAt(i);
+				#end
 				var o = c.charCodeAt(0);
 				if( o == 9 ){
 				}else if( o < 16 ){
-					c = "=0" + BaseCode.encode(c,HEXA);
+					c = "=0" + StringTools.hex(o);
 				}else if( o == 61 || o < 32 || o > 126 ){
-					c = "=" + BaseCode.encode(c,HEXA);
+					c = "=" + StringTools.hex(o);
 				}
 
 				// space at the end of line
