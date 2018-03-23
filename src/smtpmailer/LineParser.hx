@@ -2,9 +2,11 @@ package smtpmailer;
 
 import tink.io.StreamParser;
 
-class LineParser extends ByteWiseParser<String> {
+class LineParser extends BytewiseParser<String> {
   
 	var buf: StringBuf = new StringBuf();
+	
+	public function new() {}
 	
 	override function read(c: Int): ParseStep<String> {
 		return switch c {
