@@ -1,0 +1,6 @@
+-cp src
+-D smtpmailer
+
+-lib asys
+-lib mime
+-lib tink_await
