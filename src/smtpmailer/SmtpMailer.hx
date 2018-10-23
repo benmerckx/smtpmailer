@@ -7,9 +7,9 @@ import haxe.io.Error;
 import haxe.io.BytesOutput;
 import haxe.crypto.Base64;
 import tink.io.Sink;
-import tink.io.IdealSource;
-import tink.io.Source;
-import tink.io.Pipe;
+
+using  tink.io.Source;
+import tink.io.PipeResult;// changed
 
 using tink.CoreApi;
 
@@ -35,7 +35,7 @@ enum Secure {
 class SmtpMailer {
 
 	var socket: Socket;
-	var source: Source;
+	var source: RealSource; //changed
 	var connection: SmtpConnection;
 	var connected = false;
 	var options: Array<String>;
@@ -44,6 +44,8 @@ class SmtpMailer {
 	var processing = false;
 
 	public function new(connection: SmtpConnection) {
+
+        
 		if (connection.secure == null)
 			connection.secure = Secure.Auto;
 		this.connection = connection;
@@ -105,7 +107,8 @@ class SmtpMailer {
 				socket.close();
 				connected = false;
 			}
-			throw e;
+			cast throw e; //force compilation avec cast .... chais pas pkoi.
+			
 		}
 	}
 
@@ -212,8 +215,8 @@ class SmtpMailer {
 	@async function readLine(expectedStatus: Int) {
 		if (source == null) throw 'Could not read from stream';
 		var response = @await source.parse(parser);
-		source = response.rest;
-		var line = response.data;
+		source = response.b; //changed
+		var line = response.a; //changed
 		if (!hasCode(line, expectedStatus))
 			throw line;
 		return line;
