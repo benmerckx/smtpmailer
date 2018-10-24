@@ -193,7 +193,6 @@ class SmtpMailer {
 	}
 
 	@async function writeLine(line: String) {
-		source = socket.input;
 		switch @await ((line+"\r\n"): IdealSource).pipeTo(socket.output) {
 			case AllWritten:
 				return Noise;
