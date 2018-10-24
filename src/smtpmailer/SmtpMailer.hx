@@ -210,7 +210,7 @@ class SmtpMailer {
 		if (source == null) throw 'Could not read from stream';
 		var response = @await source.parse(parser);
 		source = response.b;
-		var line = response.a.force();
+		var line = response.a.force().toString();
 		if (!hasCode(line, expectedStatus))
 			throw line;
 		return line;
