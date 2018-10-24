@@ -3,18 +3,28 @@ dist: trusty
 
 language: node_js
 node_js: 8
-
+  
 services:
   - docker
+
+cache:
+  directories:
+    - $HOME/haxe
 
 os:
   - linux
   # - osx
 
+env:
+  - HAXE_VERSION=3.4.7
+  - HAXE_VERSION=4.0.0-prewiew.3
+  
 install:
-  - yarn global add lix haxe-travix
+  - npm i -g lix
+  - lix install haxe $HAXE_VERSION
   - lix download
   - docker run -d --name fakesmtp -p 1025:25 -v /tmp/fakemail:/var/mail digiplant/fake-smtp
 
 script:
-  - travix node
+  - lix run travix node
+  - lix run travix php
