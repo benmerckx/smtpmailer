@@ -7,10 +7,8 @@ import haxe.io.Error;
 import haxe.io.BytesOutput;
 import haxe.crypto.Base64;
 import tink.io.Sink;
-import tink.io.IdealSource;
-import tink.io.Source;
-import tink.io.Pipe;
 
+using tink.io.Source;
 using tink.CoreApi;
 
 typedef SmtpConnection = {
@@ -35,12 +33,12 @@ enum Secure {
 class SmtpMailer {
 
 	var socket: Socket;
-	var source: Source;
+	var source: RealSource;
 	var connection: SmtpConnection;
 	var connected = false;
 	var options: Array<String>;
 	var parser = new LineParser();
-	var queue: Array<Pair<Email, FutureTrigger<Outcome<Noise, Dynamic>>>> = [];
+	var queue: Array<Pair<Email, FutureTrigger<Outcome<Noise, Error>>>> = [];
 	var processing = false;
 
 	public function new(connection: SmtpConnection) {
@@ -93,7 +91,7 @@ class SmtpMailer {
 			@await writeLine('DATA');
 			@await readLine(354);
 			switch @await (encoded: IdealSource).pipeTo(socket.output) {
-				case PipeResult.AllWritten:
+				case AllWritten:
 				default: throw 'Could not write to stream';
 			}
 			@await writeLine('');
@@ -195,9 +193,8 @@ class SmtpMailer {
 	}
 
 	@async function writeLine(line: String) {
-		source = socket.input;
 		switch @await ((line+"\r\n"): IdealSource).pipeTo(socket.output) {
-			case PipeResult.AllWritten:
+			case AllWritten:
 				return Noise;
 			default:
 				throw 'Could not write to stream';
@@ -212,8 +209,8 @@ class SmtpMailer {
 	@async function readLine(expectedStatus: Int) {
 		if (source == null) throw 'Could not read from stream';
 		var response = @await source.parse(parser);
-		source = response.rest;
-		var line = response.data;
+		source = response.b;
+		var line = response.a.force().toString();
 		if (!hasCode(line, expectedStatus))
 			throw line;
 		return line;
