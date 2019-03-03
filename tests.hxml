@@ -4,6 +4,6 @@
 -cp src
 -lib asys
 -lib mime
--lib tink_await
+-lib tink_multipart
 -lib tink_unittest
 -lib hxnodejs-smtp-server

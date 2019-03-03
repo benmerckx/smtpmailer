@@ -1,25 +1,35 @@
 package smtpmailer;
 
-import mtwin.mail.Part;
+import tink.io.Source.IdealSource;
+import tink.multipart.Multipart;
+import tink.multipart.Part;
+import tink.http.Header;
 import mime.Mime;
+import mtwin.mail.Tools;
 
 class MultipartEncoder {
 
-	public static function encode(email: Email): String {
-		var main: Part;
-		var content: Part;
+	public static function encode(email: Email): IdealSource {
+		var parts = [];
 
-		if (email.content.html == null) {
-			content = new Part('text/plain', 'utf-8');
-			content.setContent(email.content.text);
-		} else {
-			content = new Part('multipart/alternative', 'utf-8');
-			if (email.content.text != null)
-				content.newPart('text/plain').setContent(email.content.text);
-			if (email.content.html != null)
-				content.newPart('text/html').setContent(email.content.html);
-		}
-
+		if (email.content.text != null)
+			parts.push(new Part(
+				new Header([
+					new HeaderField(CONTENT_TYPE, 'text/plain; charset=utf-8'),
+					new HeaderField('Content-transfer-encoding', 'quoted-printable')
+				]), 
+				Tools.encodeQuotedPrintable(email.content.text)
+			));
+		if (email.content.html != null)
+			parts.push(new Part(
+				new Header([
+					new HeaderField(CONTENT_TYPE, 'text/html; charset=utf-8'),
+					new HeaderField('Content-transfer-encoding', 'quoted-printable')
+				]), 
+				Tools.encodeQuotedPrintable(email.content.html)
+			));
+		
+		/*
 		if (email.attachments != null) {
 			main = new Part('multipart/mixed');
 			main.addPart(content);
@@ -31,16 +41,26 @@ class MultipartEncoder {
 			}
 		} else {
 			main = content;
-		}
+		}*/
 
-		main.setHeader('From', email.from.format());
-		main.setHeader('To', email.to.map(function(to) return to.format()).join(','));
-		main.setHeader('Subject', email.subject);
-		if (email.headers != null)
-			for (key in email.headers.keys())
-				main.setHeader(key, email.headers.get(key));
+		final multipart = new Multipart(parts);
+		final headers = new Header([
+			new HeaderField('From', email.from.format()),
+			new HeaderField('To', email.to.map(to -> to.format()).join(',')),
+			new HeaderField('Subject', email.subject)
+		].concat(
+			if (email.headers == null) []
+			else [
+				for (key => value in email.headers)
+					new HeaderField(key, value)
+			]
+		).concat([
+			new HeaderField('MIME-Version', '1.0'),
+			multipart.getContentTypeHeader()
+		]));
 
-		return main.get();
+		return (headers.toString(): IdealSource)
+			.append(multipart);
 	}
 
 }
