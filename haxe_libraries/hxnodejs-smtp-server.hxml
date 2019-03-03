@@ -1,0 +1,4 @@
+-D hxnodejs-smtp-server=0.0.0
+# @install: lix --silent download "gh://github.com/benmerckx/hxnodejs-smtp-server#d1866a5e3fe634bd18e21ef9b0f8bb479e975006" into hxnodejs-smtp-server/0.0.0/github/d1866a5e3fe634bd18e21ef9b0f8bb479e975006
+#-cp ${HAXE_LIBCACHE}/hxnodejs-smtp-server/0.0.0/github/d1866a5e3fe634bd18e21ef9b0f8bb479e975006/src
+-cp ../hxnodejs-smtp-server/src

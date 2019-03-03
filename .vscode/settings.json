@@ -1,0 +1,14 @@
+{
+  "haxe.displayConfigurations": [
+      ["tests.hxml", "-lib", "hxnodejs", "-js", "bin/dummy.js"]
+  ],
+  "editor.insertSpaces": false,
+  "editor.tabSize": 2,
+  "files.eol": "\n",
+  "haxe.executable": {
+      "path": "./node_modules/.bin/haxe",
+      "windows": {
+          "path": "./node_modules/.bin/haxe.cmd"
+      }
+  }
+}

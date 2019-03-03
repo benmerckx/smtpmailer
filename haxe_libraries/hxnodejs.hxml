@@ -1,5 +1,5 @@
-# @install: lix --silent download "haxelib:hxnodejs#4.0.9" into hxnodejs/4.0.9/haxelib
 -D hxnodejs=4.0.9
+# @install: lix --silent download "haxelib:/hxnodejs#4.0.9" into hxnodejs/4.0.9/haxelib
 -cp ${HAXE_LIBCACHE}/hxnodejs/4.0.9/haxelib/src
 -D nodejs
 --macro allowPackage('sys')

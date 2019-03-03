@@ -1,3 +1,4 @@
 /bin
 *.hxproj
 /submit.sh
+/node_modules

@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "test": "lix run travix node",
+    "postinstall": "lix download"
+  },
+  "devDependencies": {
+    "lix": "^15.3.5",
+    "smtp-server": "^3.5.0"
+  }
+}

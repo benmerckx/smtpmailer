@@ -1,4 +1,9 @@
 -cp tests
 -main RunTests
 -dce full
+-cp src
+-lib asys
+-lib mime
+-lib tink_await
 -lib tink_unittest
+-lib hxnodejs-smtp-server

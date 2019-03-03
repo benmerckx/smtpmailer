@@ -3,6 +3,7 @@ package;
 import tink.unit.*;
 import tink.testrunner.*;
 import smtpmailer.*;
+import smtpserver.SMTPServer;
 
 using tink.CoreApi;
 
@@ -10,7 +11,7 @@ using tink.CoreApi;
 class RunTests {
 
   static function main() {
-    
+    var server = new SMTPServer();
     Runner.run(TestBatch.make([
       new RunTests(),
     ])).handle(Runner.exit);
@@ -19,11 +20,11 @@ class RunTests {
   function new() {}
   
   public function send() {
-    var mailer = new SmtpMailer({
+    var mailer = SmtpMailer.connect({
       host: 'localhost',
       port: 1025,
     });
-    mailer.send({
+    /*mailer.send({
       subject: 'Subject',
       from: { address: 'mail@example.com', displayName: "It's me, Mario!" },
       to: ['mail@example.com'],
@@ -39,8 +40,8 @@ class RunTests {
       }
 			asserts.assert(result);
 			asserts.done();
-		});
+		});*/
     
-    return asserts;
+    return asserts.done();
   }
 }
