@@ -9,6 +9,8 @@ import mtwin.mail.Tools;
 
 using tink.io.Source;
 
+// Todo: divide properly, see: https://stackoverflow.com/a/46378384
+
 class MultipartEncoder {
 
 	public static function encode(email: Email): IdealSource {
