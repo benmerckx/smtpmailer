@@ -8,6 +8,7 @@ import haxe.io.Error;
 import haxe.io.BytesOutput;
 import haxe.crypto.Base64;
 import tink.io.Sink;
+import tink.io.StreamParser;
 
 using tink.io.Source;
 using tink.CoreApi;
@@ -26,7 +27,8 @@ typedef ConnectionOptions = {
 
 @:nullSafety
 class SmtpMailer {
-	static final parser = new LineParser();
+	static inline final NEW_LINE = "\r\n";
+	static final parser = new Splitter(NEW_LINE);
 	var input: RealSource;
 	final output: RealSink;
 	public final close: () -> Void;
@@ -57,13 +59,11 @@ class SmtpMailer {
 		return input.parse(parser).next(response -> {
 			input = response.b;
 			final line = response.a.force().toString();
-			trace(line);
 			return if (hasCode(line, expectedStatus)) line else new Error(line);
 		});
 	
 	function writeLine(line: String): Promise<Noise> {
-		trace(line);
-		return ((line+"\r\n"): IdealSource).pipeTo(output)
+		return ((line+NEW_LINE): IdealSource).pipeTo(output)
 			.next(res -> switch res {
 				case AllWritten: Noise;
 				case e: new Error('Could not write to sink: $e');
@@ -106,18 +106,16 @@ class SmtpMailer {
 			))
 			.next(_ -> writeLine('DATA'))
 			.next(_ -> readLine(354))
-			/*.next(_ -> {
+			.next(_ -> 
 				MultipartEncoder.encode(email)
-					.all().handle(res -> trace(res.toString()));
-			})*/
-			.next(_ -> MultipartEncoder.encode(email).pipeTo(output))
+				.append(NEW_LINE + '.' + NEW_LINE)
+				.pipeTo(output)
+			)
 			.next(res -> switch res {
 				case AllWritten: Noise;
 				case SinkFailed(e, _): e;
 				default: new Error('Connection ended');
 			})
-			.next(_ -> writeLine(''))
-			.next(_ -> writeLine('.'))
 			.next(_ -> readLine(250))
 			.noise();
 	}

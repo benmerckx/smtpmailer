@@ -7,6 +7,8 @@ import tink.http.Header;
 import mime.Mime;
 import mtwin.mail.Tools;
 
+using tink.io.Source;
+
 class MultipartEncoder {
 
 	public static function encode(email: Email): IdealSource {
@@ -29,19 +31,25 @@ class MultipartEncoder {
 				Tools.encodeQuotedPrintable(email.content.html)
 			));
 		
-		/*
-		if (email.attachments != null) {
-			main = new Part('multipart/mixed');
-			main.addPart(content);
-			for(file in email.attachments) {
-				var type = Mime.lookup(file);
-				if (type == null) type = 'application/octet-stream';
-				var part = main.newPart(type);
-				part.setContentFromFile(file, type);
-			}
-		} else {
-			main = content;
-		}*/
+		if (email.attachments != null)
+			for (file in email.attachments)
+				parts.push({
+					final type = switch Mime.lookup(file) {
+						case null: 'application/octet-stream';
+						case mime: mime;
+					}
+					final contentType = switch Mime.db.get(type) {
+						case {charset: c} if (c != null): '$type; charset=$c';
+						default: type;
+					}
+					new Part(
+						new Header([
+							new HeaderField(CONTENT_TYPE, contentType),
+							new HeaderField('Content-transfer-encoding', 'quoted-printable')
+						]),
+						asys.io.File.readStream(file).idealize(err -> '')
+					);
+				});
 
 		final multipart = new Multipart(parts);
 		final headers = new Header([
@@ -56,7 +64,7 @@ class MultipartEncoder {
 			]
 		).concat([
 			new HeaderField('MIME-Version', '1.0'),
-			multipart.getContentTypeHeader()
+			multipart.getContentTypeHeader('alternative')
 		]));
 
 		return (headers.toString(): IdealSource)

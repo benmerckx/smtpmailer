@@ -5,6 +5,7 @@
   },
   "devDependencies": {
     "lix": "^15.3.5",
+    "mailparser": "^2.4.3",
     "smtp-server": "^3.5.0"
   }
 }

@@ -4,6 +4,7 @@ import tink.unit.*;
 import tink.testrunner.*;
 import smtpmailer.*;
 import smtpserver.SMTPServer;
+import MailParser;
 
 using tink.io.Source;
 using tink.CoreApi;
@@ -48,6 +49,16 @@ class RunTests {
   
   public function send() {
     final getMessage = messages.nextTime();
+    final email: Email = {
+      subject: 'Subject',
+      from: {address: '<mail@example.com>', displayName: "It's me, Mario!"},
+      to: ['mail@example.com'],
+      content: {
+        text: 'text content',
+        html: '<font color="red">html content</font>'
+      },
+      attachments: []
+    }
     return SmtpMailer.connect({
       host: 'localhost',
       port: 1025,
@@ -57,39 +68,19 @@ class RunTests {
         password: 'password'
       }
     }).next(mailer -> {
-      mailer.send({
-        subject: 'Subject',
-        from: {address: '<mail@example.com>', displayName: "It's me, Mario!"},
-        to: ['mail@example.com'],
-        content: {
-          text: 'hello',
-          html: '<font color="red">hello</font>'
-        },
-        attachments: []
-      })
-      .next(_ -> getMessage)
-      .next(message -> {
-        trace(message);
-        mailer.close();
-        return asserts.done();
-      });
+      mailer.send(email)
+        .next(_ -> getMessage)
+        .next(message -> {
+          trace(message);
+          return MailParser.parse(message);
+        })
+        .next(parsed -> {
+          asserts.assert(parsed.subject == email.subject);
+          asserts.assert(parsed.text == email.content.text);
+          asserts.assert(parsed.html == email.content.html);
+          mailer.close();
+          return asserts.done();
+        });
     });
-    /*mailer.send({
-      subject: 'Subject',
-      from: { address: 'mail@example.com', displayName: "It's me, Mario!" },
-      to: ['mail@example.com'],
-      content: {
-        text: 'hello',
-        html: '<font color="red">hello</font>'
-      },
-      attachments: []
-    }).handle(function(o) {
-      var result = switch o {
-        case Success(_): Success(Noise);
-        case Failure(e): Failure(Error.withData('Error', e));
-      }
-			asserts.assert(result);
-			asserts.done();
-		});*/
   }
 }
