@@ -1,5 +1,6 @@
 package;
 
+import js.node.stream.Readable.IReadable;
 import tink.unit.*;
 import tink.testrunner.*;
 import smtpmailer.*;
@@ -19,11 +20,10 @@ class RunTests {
       authOptional: true,
       allowInsecureAuth: true,
       onData: (stream, _, cb) -> {
-        final source = Source.ofNodeStream('mail', stream);
-        source.all().handle(res -> {
-          signalTrigger.trigger(res.sure().toString());
-          cb();
-        });
+        MailParser.parse(stream).then(
+          signalTrigger.trigger,
+          err -> trace(err)
+        ).then(_ -> cb());
       },
       onAuth: (auth, _, cb) ->
         cb(null, {
@@ -41,9 +41,9 @@ class RunTests {
     });
   }
 
-  final messages: Signal<String>;
+  final messages: Signal<ParsedMail>;
   
-  function new(messages: Signal<String>) {
+  function new(messages: Signal<ParsedMail>) {
     this.messages = messages;
   }
   
@@ -51,13 +51,15 @@ class RunTests {
     final getMessage = messages.nextTime();
     final email: Email = {
       subject: 'Subject',
-      from: {address: '<mail@example.com>', displayName: "It's me, Mario!"},
+      from: {address: 'mail@example.com', displayName: "It's me, Mario!"},
       to: ['mail@example.com'],
       content: {
         text: 'text content',
         html: '<font color="red">html content</font>'
       },
-      attachments: []
+      attachments: [
+        'haxelib.json'
+      ]
     }
     return SmtpMailer.connect({
       host: 'localhost',
@@ -70,14 +72,13 @@ class RunTests {
     }).next(mailer -> {
       mailer.send(email)
         .next(_ -> getMessage)
-        .next(message -> {
-          trace(message);
-          return MailParser.parse(message);
-        })
         .next(parsed -> {
           asserts.assert(parsed.subject == email.subject);
           asserts.assert(parsed.text == email.content.text);
           asserts.assert(parsed.html == email.content.html);
+          asserts.assert(parsed.attachments.length == 1);
+          asserts.assert(parsed.attachments[0].filename == 'haxelib.json');
+          asserts.assert(haxe.Json.parse(parsed.attachments[0].content.toString()).name == 'smtpmailer');
           mailer.close();
           return asserts.done();
         });

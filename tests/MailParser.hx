@@ -1,3 +1,6 @@
+import js.node.stream.Readable.IReadable;
+import js.node.Buffer;
+
 typedef Address = {
 	value: Array<{
 		name: String,
@@ -39,5 +42,5 @@ typedef Attachment = {
 @:jsRequire('mailparser')
 extern class MailParser {
 	@:native('simpleParser')
-	public static function parse(source: String): js.Promise<ParsedMail>;
+	public static function parse(source: IReadable): js.Promise<ParsedMail>;
 }

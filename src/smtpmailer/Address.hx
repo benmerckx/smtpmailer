@@ -1,24 +1,31 @@
 package smtpmailer;
 
+import mtwin.mail.Tools;
+
 typedef AddressData = {
 	address: String,
-	?displayName: String,
+	?displayName: String
 }
 
-@:forward
+@:forward(displayName)
 abstract Address(AddressData) from AddressData {
-	public inline function new( address: AddressData )
-		this = {
-			address: AddressTools.sanitizeAddress(address.address),
-			displayName: address.displayName
-		}
+	public inline function new(address)
+		this = address;
+
+	public var address(get, never): String;
+	function get_address()
+		return Tools.formatAddress([{
+			name: null,
+			address: this.address
+		}]);
 
 	@:from
-	public static function ofString( address: String ): Address
-		return new Address({ address: address });
+	public static function ofString(address: String)
+		return new Address({address: address});
 
-	public function format()
-		return this.displayName != null
-			? '"${this.displayName}" ${this.address}'
-			: '${this.address}';
+	public function toString()
+		return Tools.formatAddress([{
+			name: this.displayName,
+			address: this.address
+		}]);
 }

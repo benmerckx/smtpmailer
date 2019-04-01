@@ -564,8 +564,7 @@ class Tools {
 	public static function formatAddress( a : Array<Address> ){
 		var r = new List();
 		for( c in a ){
-			if( c.name == null || c.name == "" ) r.add(c.address);
-			else if( ~/^[A-Z0-9 ]*$/i.match(c.name) ) r.add(c.name+" <"+c.address+">");
+			if( c.name == null || c.name == "" ) r.add('<'+c.address+'>');
 			else{
 				var quoted = c.name.split("\\").join("\\\\").split("\"").join("\\\"");
 				r.add("\""+quoted+"\" <"+c.address+">");
