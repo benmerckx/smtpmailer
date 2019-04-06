@@ -10,7 +10,7 @@ cache:
     - $HOME/haxe
 
 env:
-  - HAXE_VERSION=4.0.0-rc.1
+  - HAXE_VERSION=4.0.0-rc.2
 
 install:
   - yarn
