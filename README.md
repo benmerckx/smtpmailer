@@ -24,7 +24,7 @@ smtpmailer.SmtpMailer.connect({
 }).next(mailer ->
   mailer.send(email).next(
     _ -> mailer.close()
-  );
+  )
 ).handle(function(res) {
 	switch res {
 		case Success(_):
