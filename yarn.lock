@@ -115,9 +115,10 @@ linkify-it@2.0.3:
   dependencies:
     uc.micro "^1.0.1"
 
-lix@^15.3.5:
-  version "15.3.5"
-  resolved "https://registry.yarnpkg.com/lix/-/lix-15.3.5.tgz#fdffe8e3b5f07f46dabcabc83eaf65dfaaf78825"
+lix@^15.6.0-alpha.1:
+  version "15.6.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/lix/-/lix-15.6.0-alpha.1.tgz#dfbe348e053332f7a27a339072d8379566a120e8"
+  integrity sha512-lEU2T10Qp/l0kis11QKiMxfVcqh6PSIm4leOv7Hg/xdcAi427iPBKoo4jChLdmQkzr4LY2LHQgeLSXEcH38Edg==
 
 lodash@^4.17.4:
   version "4.17.11"

@@ -9,12 +9,8 @@ cache:
   directories:
     - $HOME/haxe
 
-env:
-  - HAXE_VERSION=4.0.0-rc.2
-
 install:
   - yarn
-  - lix install haxe $HAXE_VERSION && lix use haxe $HAXE_VERSION
 
 script:
   - yarn test

@@ -10,7 +10,6 @@ import MailParser;
 using tink.io.Source;
 using tink.CoreApi;
 
-@:asserts
 class RunTests {
 
   static function main() {
@@ -47,7 +46,7 @@ class RunTests {
     this.messages = messages;
   }
   
-  public function send() {
+  public function send(asserts: AssertionBuffer) {
     final getMessage = messages.nextTime();
     final email: Email = {
       subject: 'ᚠᛇᚻ᛫ᛒᛦᚦ᛫ᚠᚱᚩᚠᚢᚱ᛫ᚠ',

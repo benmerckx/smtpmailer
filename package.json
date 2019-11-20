@@ -4,7 +4,7 @@
     "postinstall": "lix download"
   },
   "devDependencies": {
-    "lix": "^15.3.5",
+    "lix": "^15.6.0-alpha.1",
     "mailparser": "^2.4.3",
     "smtp-server": "^3.5.0"
   }
