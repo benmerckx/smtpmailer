@@ -4,8 +4,6 @@ import asys.net.Socket;
 import asys.net.Host;
 import asys.ssl.Socket as SslSocket;
 import haxe.io.Bytes;
-import haxe.io.Error;
-import haxe.io.BytesOutput;
 import haxe.crypto.Base64;
 import tink.io.Sink;
 import tink.io.StreamParser;
@@ -107,9 +105,10 @@ class SmtpMailer {
 			.next(_ -> writeLine('DATA'))
 			.next(_ -> readLine(354))
 			.next(_ -> 
-				MultipartEncoder.encode(email)
-				.append(NEW_LINE + '.' + NEW_LINE)
-				.pipeTo(output)
+				MultipartEncoder
+					.encode(email)
+					.append(NEW_LINE + '.' + NEW_LINE)
+					.pipeTo(output)
 			)
 			.next(res -> switch res {
 				case AllWritten: Noise;

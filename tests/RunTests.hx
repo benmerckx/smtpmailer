@@ -50,7 +50,7 @@ class RunTests {
   public function send() {
     final getMessage = messages.nextTime();
     final email: Email = {
-      subject: 'Subject',
+      subject: 'ᚠᛇᚻ᛫ᛒᛦᚦ᛫ᚠᚱᚩᚠᚢᚱ᛫ᚠ',
       from: {address: 'mail@example.com', displayName: "It's me, Mario!"},
       to: ['mail@example.com'],
       content: {
