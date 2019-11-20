@@ -77,7 +77,7 @@ class MultipartEncoder {
 			Tools.encodeQuotedPrintable(content)
 		);
 
-	static function encodesubject(subject: String)
+	static function encodeSubject(subject: String)
   	return '=?UTF-8?B?'+Base64.encode(haxe.io.Bytes.ofString(subject))+'?=';
 
 	public static function encode(email: Email): IdealSource {
@@ -131,7 +131,7 @@ class MultipartEncoder {
 		final headers = new Header([
 			new HeaderField('from', '${email.from}'),
 			new HeaderField('to', email.to.map(to -> '${to}').join(',')),
-			new HeaderField('subject', encodesubject(email.subject))
+			new HeaderField('subject', encodeSubject(email.subject))
 		].concat(switch email.headers {
 			case null: [];
 			case headers: [
