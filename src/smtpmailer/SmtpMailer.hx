@@ -57,10 +57,12 @@ class SmtpMailer {
 		return input.parse(parser).next(response -> {
 			input = response.b;
 			final line = response.a.force().toString();
+			trace(line);
 			return if (hasCode(line, expectedStatus)) line else new Error(line);
 		});
 	
 	function writeLine(line: String): Promise<Noise> {
+		trace(line);
 		return ((line+NEW_LINE): IdealSource).pipeTo(output)
 			.next(res -> switch res {
 				case AllWritten: Noise;
@@ -69,8 +71,10 @@ class SmtpMailer {
 	}
 
 	function handshake(): Promise<Array<String>>
-		return readLine(220)
-			.next(_ -> writeLine('EHLO ' + Host.localhost()))
+		return readLine(220).next(_ -> ehlo());
+
+	function ehlo(): Promise<Array<String>>
+		return writeLine('EHLO ' + Host.localhost())
 			.next(_ -> {
 				var options = [];
 				return Promise.iterate({
@@ -131,7 +135,8 @@ class SmtpMailer {
 				.next(_ -> mailer.readLine(220))
 				.next(_ -> {
 					final upgraded = toMailer(SslSocket.upgrade(socket));
-					return upgraded.writeLine('EHLO ' + Host.localhost())
+					return upgraded
+						.ehlo()
 						.next(_ -> upgraded);
 				});
 		function auth(mailer: SmtpMailer, options: Array<String>): Promise<SmtpMailer>
