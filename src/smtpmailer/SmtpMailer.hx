@@ -57,12 +57,16 @@ class SmtpMailer {
 		return input.parse(parser).next(response -> {
 			input = response.b;
 			final line = response.a.force().toString();
+			#if smtp_debug
 			trace(line);
+			#end
 			return if (hasCode(line, expectedStatus)) line else new Error(line);
 		});
 	
 	function writeLine(line: String): Promise<Noise> {
+		#if smtp_debug
 		trace(line);
+		#end
 		return ((line+NEW_LINE): IdealSource).pipeTo(output)
 			.next(res -> switch res {
 				case AllWritten: Noise;
