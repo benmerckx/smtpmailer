@@ -2,3 +2,4 @@
 *.hxproj
 /submit.sh
 /node_modules
+/tests/SendMail.hx
