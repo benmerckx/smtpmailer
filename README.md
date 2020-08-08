@@ -6,7 +6,7 @@ Runs on sys targets and nodejs. Requires haxe 4+
 final email = {
 	subject: 'Subject',
 	from: {address: 'mail@example.com', displayName: "It's me, Mario!"},
-	to: ['mail@example.com'],
+	to: [{address:'mail@example2.com', displayName:"Luigi Plumber"}],
 	content: {
 		text: 'hello',
 		html: '<font color="red">hello</font>'
