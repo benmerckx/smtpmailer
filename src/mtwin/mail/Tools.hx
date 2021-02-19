@@ -108,6 +108,9 @@ class Tools {
 	}
 
 	public static function encodeQuotedPrintable( content : String ) : String{
+		#if php
+		return php.Syntax.code("quoted_printable_encode({0})", content);
+		#else
 		var rs = new List();
 		var lines = splitLines( content );
 
@@ -155,10 +158,14 @@ class Tools {
 		}
 
 		return rs.join("\r\n");
+		#end
 	}
 
 	static var REG_HEXA = ~/^[0-9A-F]{2}$/;
 	public static function decodeQuotedPrintable( str : String ){
+		#if php
+		return php.Syntax.code("quoted_printable_decode({0})", str);
+		#else
 		str = ~/=\r?\n/g.replace(str,"");
 		var a = str.split("=");
 		var first = true;
@@ -180,6 +187,7 @@ class Tools {
 			}
 		}
 		return ret.toString();
+		#end
 	}
 
 	public static function headerQpEncode( ostr : String, initSize : Int, charset : String, ?cleanQuote : Bool ){
