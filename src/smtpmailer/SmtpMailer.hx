@@ -137,7 +137,12 @@ class SmtpMailer {
 		function upgradeTls(socket: Socket, mailer: SmtpMailer): Promise<SmtpMailer>
 			return mailer.writeLine('STARTTLS')
 				.next(_ -> mailer.readLine(220))
-				.next(_ -> toMailer(SslSocket.upgrade(socket)));
+				.next(_ -> {
+					final upgraded = toMailer(SslSocket.upgrade(socket));
+					return upgraded
+						.ehlo()
+						.next(_ -> upgraded);
+				});
 		function auth(mailer: SmtpMailer, options: Array<String>): Promise<SmtpMailer>
 			return switch connection.auth {
 				case null: mailer;
